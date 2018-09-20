@@ -1,0 +1,8 @@
+prefix=/home/turtlebot/ros_teleopTest/install
+
+Name: simpleTeleOp
+Description: Description of simpleTeleOp
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/turtlebot/ros_teleopTest/install/lib 
+Requires: 

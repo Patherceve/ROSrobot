@@ -1,0 +1,2 @@
+simpleTeleOp
+-DCATKIN_DEVEL_PREFIX=/home/turtlebot/ros_teleopTest/devel -DCMAKE_INSTALL_PREFIX=/home/turtlebot/ros_teleopTest/install

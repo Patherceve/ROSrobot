@@ -1,0 +1,7 @@
+set(_CATKIN_CURRENT_PACKAGE "simpleTeleOp")
+set(simpleTeleOp_MAINTAINER "turtlebot <turtlebot@todo.todo>")
+set(simpleTeleOp_DEPRECATED "")
+set(simpleTeleOp_VERSION "0.0.0")
+set(simpleTeleOp_BUILD_DEPENDS "roscpp" "rospy" "std_msgs")
+set(simpleTeleOp_RUN_DEPENDS "roscpp" "rospy" "std_msgs")
+set(simpleTeleOp_BUILDTOOL_DEPENDS "catkin")
