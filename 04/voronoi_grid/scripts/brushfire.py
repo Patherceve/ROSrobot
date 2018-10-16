@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 import rospy
+import time
 from voronoi_grid.msg import GridInfo
 from nav_msgs.msg import OccupancyGrid
-import time
+
 
 gridInfo = GridInfo()
 
 def gridInfoCb(gridInfo):
-	print 'In gridInfoCb'
 	brushfire(gridInfo)
 
 def oneDToTwo(i, width):
@@ -18,6 +18,7 @@ def twoDToOne(r, c, width):
 	return (r * width) + c
 
 def inLine(grid):
+	# make a 1D Occupancy Grid out of 2D list
 	outGrid = OccupancyGrid()
 	for i_r, r in enumerate(grid):
 		for j_c, c in enumerate(r):
@@ -27,15 +28,31 @@ def inLine(grid):
 	outGrid.info.width = 100
 	outGrid.info.height = 100
 	outGrid.info.resolution = 0.05
+
 	return outGrid
 
-def getNeighbors2D(row, col):
+def getNeighbors2D(loc, width):
 	# up, down, left, right
-	return [[row-1, col], [row+1, col], [row, col-1], [row, col+1]]
+	neighbors = list()
+	temp = [[loc[0]-1, loc[1]], [loc[0]+1, loc[1]], [loc[0], loc[1]-1], [loc[0], loc[1]+1]]
+	# filter for non-existing out of range neighbors
+	for n in temp:
+		if not(n[0] < 0 or n[1] < 0 or n[0] >= width or n[1] >= width):
+			neighbors.append(n)
+
+	return neighbors
+
+def distLocation(grid, width, distVal):
+	# listing all locations at distVal
+	loc = list()
+	for r in range(0, width):
+		for c in range(0, width):
+			if grid[r][c] == distVal:
+				loc.append([r, c])
+
+	return loc
 
 def brushfire(gridInfo):
-	print 'In brushfire'
-
 	pub = rospy.Publisher('/bf_map', OccupancyGrid, queue_size=100)
 
 	# getting the width of the map
@@ -59,50 +76,39 @@ def brushfire(gridInfo):
 		tlR, tlC = oneDToTwo(gridInfo.obs[obstacle].i_pixels[0], width)
 		# coordinates of the bottom right corner
 		brR, brC = oneDToTwo(gridInfo.obs[obstacle].i_pixels[len(gridInfo.obs[obstacle].i_pixels)-1], width)
-		# print 'top left: r: %s c: %s' %(tlR, tlC)
-		# print 'bottom right: r: %s c: %s' %(brR, brC)
+		# assiging 2 with out of range verification
 		for obsCol in range(tlC, brC+1):
-			brushGrid[tlR-1][obsCol] = 2
-			brushGrid[brR+1][obsCol] = 2
+			if tlR-1 >= 0:
+				brushGrid[tlR-1][obsCol] = 2
+			if brR+1 <= width-1:
+				brushGrid[brR+1][obsCol] = 2
 		for obsRow in range(tlR, brR+1):
-			brushGrid[obsRow][tlC-1] = 2
-			brushGrid[obsRow][brC+1] = 2
+			if tlC-1 >= 0:
+				brushGrid[obsRow][tlC-1] = 2
+			if brC+1 <= width-1:
+				brushGrid[obsRow][brC+1] = 2
 	
-	# listing all non 0 locations
-	nonZeroLocations = list()
-	for r in range(0, width):
-		for c in range(0, width):
-			if not(brushGrid[r][c] == 0):
-				nonZeroLocations.append([r, c])
+	# begins at distance 2
+	currentDist = 2
+	openList = distLocation(brushGrid, width, currentDist)
 
-#
-# WORK ZONE
-#
-
-	# setting count for distance value
-	count = 2
 	# setting the grid on fire
-	while not(len(nonZeroLocations) == 0):
-		print 'In while'
-		for e in nonZeroLocations:
-			print 'In nonZeroLocations'
-			current = nonZeroLocations.pop(nonZeroLocations.index(e))
-			# setting the neighbors list
+	while len(openList) != 0:
+		# for each location at current distance
+		for location in openList:
+			# clean/get location's neighbors list
 			neighbors = list()
-			neighbors = getNeighbors2D(current[0], current[1])
-			print 'len(neighbors): %s' % len(neighbors)
-			# finding neighbors with count value i, and assining i+1 to current location
+			neighbors = getNeighbors2D(location, width)
+			# for each neighbors
 			for n in neighbors:
-				# n[o]>-1 and < height and n[1]...
-				if(brushGrid[n[0]][n[1]] == 0):
-					brushGrid[n[0]][n[1]] = count + 1
+				if brushGrid[n[0]][n[1]] == 0:
+					brushGrid[n[0]][n[1]] = currentDist + 1
 
-		count += 1
+		# updating current distance value and openList
+		currentDist += 1
+		openList = distLocation(brushGrid, width, currentDist)
 
-#
-# END WORK ZONE
-#
-
+	# making reeeeeeeally sure it publishes
 	pub.publish(inLine(brushGrid))
 	pub.publish(inLine(brushGrid))
 	time.sleep(1)
@@ -112,12 +118,6 @@ def brushfire(gridInfo):
 	pub.publish(inLine(brushGrid))
 	pub.publish(inLine(brushGrid))
 	time.sleep(1)
-
-	# # output to file
-	# o = open('out.txt', 'w')
-	# for e in brushGrid:
-	# 	o.write(' '.join(map(str, e)) + '\n')
-	# o.close
 
 def main():
     print 'In main'
